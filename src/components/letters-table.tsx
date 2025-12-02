@@ -8,6 +8,7 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { FileText, Tag, Building2, User, Calendar } from "lucide-react";
+import Link from "next/link";
 import type { Letter } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -70,7 +71,10 @@ function CategoryBadge({ category }: { category: string | null }) {
     "border-slate-500 bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-400";
 
   return (
-    <Badge variant="outline" className={cn("font-medium capitalize", colorClass)}>
+    <Badge
+      variant="outline"
+      className={cn("font-medium capitalize", colorClass)}
+    >
       {category}
     </Badge>
   );
@@ -81,10 +85,13 @@ const columns: ColumnDef<Letter>[] = [
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
+      <Link
+        href={`/?letterType=${row.original.name}`}
+        className="flex items-center gap-2 hover:underline focus-visible:ring-2 ring-blue-400 rounded transition"
+      >
         <FileText className="h-4 w-4 text-muted-foreground" />
         <span className="font-medium">{row.original.name}</span>
-      </div>
+      </Link>
     ),
   },
   {
