@@ -97,3 +97,73 @@ export function TableSkeleton() {
   );
 }
 
+export function LettersTableSkeleton() {
+  return (
+    <div className="rounded-lg border bg-card shadow-sm">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>
+              <Skeleton className="h-4 w-24" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-20" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-24" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-20" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead>
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(8)].map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+

@@ -1,5 +1,5 @@
 import pool from "./db";
-import type { AccountLetterWithDetails, TrackingEvent } from "./types";
+import type { AccountLetterWithDetails, Letter, TrackingEvent } from "./types";
 
 interface AccountLetterRow {
   id: number;
@@ -82,4 +82,22 @@ export async function getAccountLettersWithTracking(): Promise<
     ...al,
     tracking_events: trackingEventsByAccountLetter.get(al.id) || [],
   }));
+}
+
+export async function getLetters(): Promise<Letter[]> {
+  const result = await pool.query<Letter>(`
+    SELECT 
+      id,
+      name,
+      description,
+      category,
+      business_unit,
+      created_by,
+      is_active,
+      created_at
+    FROM letters
+    ORDER BY created_at DESC
+  `);
+
+  return result.rows;
 }
