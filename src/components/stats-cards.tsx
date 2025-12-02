@@ -1,7 +1,13 @@
 "use client";
 
 import { use } from "react";
-import { Mail, Truck, CheckCircle, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  Mail,
+  Truck,
+  CheckCircle,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
 import type { AccountLetterWithDetails } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 
@@ -65,8 +71,10 @@ function StatCard({
 
   const iconBgColors = {
     blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-    amber: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
-    emerald: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+    amber:
+      "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+    emerald:
+      "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
   };
 
   const isPositive = change >= 0;
@@ -78,7 +86,9 @@ function StatCard({
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {label}
           </p>
-          <p className={`mt-2 text-4xl font-semibold tabular-nums ${numberColors[color]}`}>
+          <p
+            className={`mt-2 text-4xl font-semibold tabular-nums ${numberColors[color]}`}
+          >
             {value}
           </p>
         </div>
@@ -92,12 +102,20 @@ function StatCard({
         ) : (
           <TrendingDown className="h-4 w-4 text-rose-500" />
         )}
-        <span className={isPositive ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-rose-600 dark:text-rose-400"}>
-          {isPositive ? "+" : ""}{change}%
+        <span
+          className={
+            isPositive
+              ? "font-medium text-emerald-600 dark:text-emerald-400"
+              : "font-medium text-rose-600 dark:text-rose-400"
+          }
+        >
+          {isPositive ? "+" : ""}
+          {change}%
         </span>
-        <span className="text-slate-500 dark:text-slate-400">{changeLabel}</span>
+        <span className="text-slate-500 dark:text-slate-400">
+          {changeLabel}
+        </span>
       </div>
     </div>
   );
 }
-
