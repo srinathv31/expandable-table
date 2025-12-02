@@ -25,6 +25,7 @@ const statusOptions: { value: LetterStatus; label: string }[] = [
   { value: "not_sent", label: "Not Sent" },
   { value: "shipped", label: "Shipped" },
   { value: "delivered", label: "Delivered" },
+  { value: "returned", label: "Returned" },
 ];
 
 // Client-side parsers (without defaults that would cause hydration issues)
@@ -95,9 +96,7 @@ export function DataTableToolbar({ letterNames }: DataTableToolbarProps) {
           <Input
             placeholder="Search account ID..."
             value={filters.accountId || ""}
-            onChange={(e) =>
-              setFilters({ accountId: e.target.value || null })
-            }
+            onChange={(e) => setFilters({ accountId: e.target.value || null })}
             className="h-9 w-[200px] pl-8"
           />
         </div>
@@ -219,8 +218,8 @@ export function DataTableToolbar({ letterNames }: DataTableToolbarProps) {
                     {filters.from && filters.to
                       ? "Range"
                       : filters.from
-                        ? "From"
-                        : "To"}
+                      ? "From"
+                      : "To"}
                   </Badge>
                 </>
               )}
@@ -233,9 +232,7 @@ export function DataTableToolbar({ letterNames }: DataTableToolbarProps) {
                 <Input
                   type="date"
                   value={
-                    filters.from
-                      ? filters.from.toISOString().split("T")[0]
-                      : ""
+                    filters.from ? filters.from.toISOString().split("T")[0] : ""
                   }
                   onChange={(e) =>
                     setFilters({
@@ -357,4 +354,3 @@ export function DataTableToolbar({ letterNames }: DataTableToolbarProps) {
     </div>
   );
 }
-

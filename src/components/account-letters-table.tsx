@@ -32,11 +32,15 @@ interface AccountLettersTableProps {
 
 const statusConfig: Record<
   LetterStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
 > = {
   not_sent: { label: "Not Sent", variant: "secondary" },
   shipped: { label: "Shipped", variant: "default" },
   delivered: { label: "Delivered", variant: "outline" },
+  returned: { label: "Returned", variant: "destructive" },
 };
 
 function formatDate(date: Date | null): string {
@@ -58,7 +62,9 @@ function StatusBadge({ status }: { status: LetterStatus }) {
         status === "delivered" &&
           "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
         status === "shipped" && "bg-blue-600 hover:bg-blue-700",
-        status === "not_sent" && "bg-muted text-muted-foreground"
+        status === "not_sent" && "bg-muted text-muted-foreground",
+        status === "returned" &&
+          "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400"
       )}
     >
       {config.label}
@@ -203,63 +209,63 @@ export function AccountLettersTable({
       <DataTableToolbar letterNames={letterNames} />
       <div className="rounded-lg border bg-card shadow-sm">
         <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="font-semibold">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <Fragment key={row.id}>
-                <TableRow
-                  className={cn(
-                    "cursor-pointer transition-colors",
-                    row.getIsExpanded() && "bg-muted/50"
-                  )}
-                  onClick={() => row.toggleExpanded()}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-                {row.getIsExpanded() && (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="p-0">
-                      <ExpandedRow row={row} />
-                    </TableCell>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="font-semibold">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <Fragment key={row.id}>
+                  <TableRow
+                    className={cn(
+                      "cursor-pointer transition-colors",
+                      row.getIsExpanded() && "bg-muted/50"
+                    )}
+                    onClick={() => row.toggleExpanded()}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
                   </TableRow>
-                )}
-              </Fragment>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No letters found.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                  {row.getIsExpanded() && (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="p-0">
+                        <ExpandedRow row={row} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No letters found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

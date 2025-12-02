@@ -10,7 +10,7 @@ interface AccountLetterRow {
   address: string | null;
   mailed_at: Date | null;
   eta: Date | null;
-  status: "not_sent" | "shipped" | "delivered";
+  status: "not_sent" | "shipped" | "delivered" | "returned";
   created_at: Date;
   letter_name: string;
   letter_description: string | null;
@@ -71,11 +71,12 @@ export async function getAccountLettersWithTracking(
     paramIndex++;
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Parse sort
   const { column, direction } = parseSort(filters?.sort || "mailed_at.desc");
-  
+
   // Map column names to SQL columns
   const sortColumnMap: Record<string, string> = {
     mailed_at: "al.mailed_at",
@@ -85,7 +86,7 @@ export async function getAccountLettersWithTracking(
     eta: "al.eta",
     created_at: "al.created_at",
   };
-  
+
   const sortColumn = sortColumnMap[column] || "al.mailed_at";
   const sortDirection = direction === "asc" ? "ASC" : "DESC";
   const nullsHandling = direction === "asc" ? "NULLS FIRST" : "NULLS LAST";
