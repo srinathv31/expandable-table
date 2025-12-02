@@ -1,12 +1,20 @@
 import { Suspense } from "react";
-import { getAccountLettersWithTracking } from "@/lib/queries";
+import type { SearchParams } from "nuqs/server";
+import { getAccountLettersWithTracking, getLetterNames } from "@/lib/queries";
+import { searchParamsCache } from "@/lib/search-params";
 import { AccountLettersTable } from "@/components/account-letters-table";
 import { StatsCards } from "@/components/stats-cards";
 import { StatsCardsSkeleton, TableSkeleton } from "@/components/skeletons";
 import { Mail } from "lucide-react";
 
-export default function Home() {
-  const dataPromise = getAccountLettersWithTracking();
+type PageProps = {
+  searchParams: Promise<SearchParams>;
+};
+
+export default async function Home({ searchParams }: PageProps) {
+  const filters = await searchParamsCache.parse(searchParams);
+  const dataPromise = getAccountLettersWithTracking(filters);
+  const letterNamesPromise = getLetterNames();
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -35,7 +43,10 @@ export default function Home() {
 
         {/* Table */}
         <Suspense fallback={<TableSkeleton />}>
-          <AccountLettersTable dataPromise={dataPromise} />
+          <AccountLettersTable
+            dataPromise={dataPromise}
+            letterNamesPromise={letterNamesPromise}
+          />
         </Suspense>
       </div>
     </div>

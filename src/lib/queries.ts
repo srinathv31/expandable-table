@@ -1,5 +1,7 @@
 import pool from "./db";
 import type { AccountLetterWithDetails, Letter, TrackingEvent } from "./types";
+import type { FilterValues } from "./search-params";
+import { parseSort } from "./search-params";
 
 interface AccountLetterRow {
   id: number;
@@ -23,11 +25,74 @@ interface TrackingEventRow {
   occurred_at: Date;
 }
 
-export async function getAccountLettersWithTracking(): Promise<
-  AccountLetterWithDetails[]
-> {
+// Get unique letter names for filter dropdown
+export async function getLetterNames(): Promise<string[]> {
+  const result = await pool.query<{ name: string }>(
+    "SELECT DISTINCT name FROM letters ORDER BY name"
+  );
+  return result.rows.map((row) => row.name);
+}
+
+export async function getAccountLettersWithTracking(
+  filters?: FilterValues
+): Promise<AccountLetterWithDetails[]> {
+  // Build dynamic WHERE clauses
+  const conditions: string[] = [];
+  const params: (string | string[] | Date)[] = [];
+  let paramIndex = 1;
+
+  if (filters?.accountId) {
+    conditions.push(`al.account_id ILIKE $${paramIndex}`);
+    params.push(`%${filters.accountId}%`);
+    paramIndex++;
+  }
+
+  if (filters?.status && filters.status.length > 0) {
+    conditions.push(`al.status = ANY($${paramIndex})`);
+    params.push(filters.status);
+    paramIndex++;
+  }
+
+  if (filters?.letterType && filters.letterType.length > 0) {
+    conditions.push(`l.name = ANY($${paramIndex})`);
+    params.push(filters.letterType);
+    paramIndex++;
+  }
+
+  if (filters?.from) {
+    conditions.push(`al.mailed_at >= $${paramIndex}`);
+    params.push(filters.from);
+    paramIndex++;
+  }
+
+  if (filters?.to) {
+    conditions.push(`al.mailed_at <= $${paramIndex}`);
+    params.push(filters.to);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // Parse sort
+  const { column, direction } = parseSort(filters?.sort || "mailed_at.desc");
+  
+  // Map column names to SQL columns
+  const sortColumnMap: Record<string, string> = {
+    mailed_at: "al.mailed_at",
+    account_id: "al.account_id",
+    letter_name: "l.name",
+    status: "al.status",
+    eta: "al.eta",
+    created_at: "al.created_at",
+  };
+  
+  const sortColumn = sortColumnMap[column] || "al.mailed_at";
+  const sortDirection = direction === "asc" ? "ASC" : "DESC";
+  const nullsHandling = direction === "asc" ? "NULLS FIRST" : "NULLS LAST";
+
   // Fetch all account letters with letter details
-  const accountLettersResult = await pool.query<AccountLetterRow>(`
+  const accountLettersResult = await pool.query<AccountLetterRow>(
+    `
     SELECT 
       al.id,
       al.account_id,
@@ -42,8 +107,11 @@ export async function getAccountLettersWithTracking(): Promise<
       l.category as letter_category
     FROM account_letters al
     JOIN letters l ON al.letter_id = l.id
-    ORDER BY al.created_at DESC
-  `);
+    ${whereClause}
+    ORDER BY ${sortColumn} ${sortDirection} ${nullsHandling}
+  `,
+    params
+  );
 
   const accountLetters = accountLettersResult.rows;
 

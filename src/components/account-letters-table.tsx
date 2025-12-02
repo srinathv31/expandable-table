@@ -22,10 +22,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TrackingTimeline } from "@/components/tracking-timeline";
+import { DataTableToolbar } from "@/components/data-table-toolbar";
 import { cn } from "@/lib/utils";
 
 interface AccountLettersTableProps {
   dataPromise: Promise<AccountLetterWithDetails[]>;
+  letterNamesPromise: Promise<string[]>;
 }
 
 const statusConfig: Record<
@@ -181,8 +183,12 @@ function ExpandedRow({ row }: { row: Row<AccountLetterWithDetails> }) {
   );
 }
 
-export function AccountLettersTable({ dataPromise }: AccountLettersTableProps) {
+export function AccountLettersTable({
+  dataPromise,
+  letterNamesPromise,
+}: AccountLettersTableProps) {
   const data = use(dataPromise);
+  const letterNames = use(letterNamesPromise);
 
   const table = useReactTable({
     data,
@@ -193,8 +199,10 @@ export function AccountLettersTable({ dataPromise }: AccountLettersTableProps) {
   });
 
   return (
-    <div className="rounded-lg border bg-card shadow-sm">
-      <Table>
+    <div>
+      <DataTableToolbar letterNames={letterNames} />
+      <div className="rounded-lg border bg-card shadow-sm">
+        <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -252,6 +260,7 @@ export function AccountLettersTable({ dataPromise }: AccountLettersTableProps) {
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
