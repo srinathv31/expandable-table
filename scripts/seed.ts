@@ -380,6 +380,32 @@ const scenarios: AccountScenario[] = [
       return letters.sort((a, b) => b.daysAgo - a.daysAgo);
     },
   },
+
+  // Letter Stuck in Transit: Shipped but way past ETA (2 accounts)
+  {
+    name: "Letter stuck in transit",
+    count: 2,
+    generator: () => {
+      const letters: AccountLetterData[] = [];
+
+      // Welcome Kit delivered months ago
+      letters.push({
+        letterId: LETTERS.WELCOME,
+        daysAgo: randomInt(90, 150),
+        status: "delivered",
+      });
+
+      // A letter shipped 30+ days ago (ETA is mailed_at + 5, so 25+ days overdue)
+      const stuckLetter = pickRandomLetters(1, [LETTERS.WELCOME])[0];
+      letters.push({
+        letterId: stuckLetter,
+        daysAgo: randomInt(30, 45), // 25-40 days past the 5-day ETA
+        status: "shipped",
+      });
+
+      return letters.sort((a, b) => b.daysAgo - a.daysAgo);
+    },
+  },
 ];
 
 async function seed() {

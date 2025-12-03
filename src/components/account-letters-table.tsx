@@ -52,7 +52,34 @@ function formatDate(date: Date | null): string {
   });
 }
 
-function StatusBadge({ status }: { status: LetterStatus }) {
+function isStuckInTransit(status: LetterStatus, eta: Date | null): boolean {
+  if (status !== "shipped" || !eta) return false;
+  const daysPastEta = Math.floor(
+    (Date.now() - new Date(eta).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  return daysPastEta >= 20;
+}
+
+function StatusBadge({
+  status,
+  eta,
+}: {
+  status: LetterStatus;
+  eta: Date | null;
+}) {
+  const stuck = isStuckInTransit(status, eta);
+
+  if (stuck) {
+    return (
+      <Badge
+        variant="outline"
+        className="border-amber-500 bg-amber-50 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+      >
+        Stuck
+      </Badge>
+    );
+  }
+
   const config = statusConfig[status];
   return (
     <Badge
@@ -148,7 +175,9 @@ const columns: ColumnDef<AccountLetterWithDetails>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    cell: ({ row }) => (
+      <StatusBadge status={row.original.status} eta={row.original.eta} />
+    ),
   },
 ];
 
