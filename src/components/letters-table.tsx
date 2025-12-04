@@ -130,6 +130,20 @@ const columns: ColumnDef<Letter>[] = [
     cell: ({ row }) => <StatusBadge isActive={row.original.is_active} />,
   },
   {
+    accessorKey: "control_id",
+    header: "Control ID",
+    cell: ({ row }) => (
+      <span className="text-sm">{row.original.control_id || "—"}</span>
+    ),
+  },
+  {
+    accessorKey: "control_day_count",
+    header: "Control Day Count",
+    cell: ({ row }) => (
+      <span className="text-sm">{row.original.control_day_count || "—"}</span>
+    ),
+  },
+  {
     accessorKey: "created_at",
     header: "Created",
     cell: ({ row }) => (
