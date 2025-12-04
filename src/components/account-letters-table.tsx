@@ -9,7 +9,14 @@ import {
   type ColumnDef,
   type Row,
 } from "@tanstack/react-table";
-import { ChevronRight, Mail, MapPin, Calendar, Clock } from "lucide-react";
+import {
+  ChevronRight,
+  Mail,
+  MapPin,
+  Calendar,
+  Clock,
+  AlertTriangle,
+} from "lucide-react";
 import type { AccountLetterWithDetails, LetterStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +48,7 @@ const statusConfig: Record<
   shipped: { label: "Shipped", variant: "default" },
   delivered: { label: "Delivered", variant: "outline" },
   returned: { label: "Returned", variant: "destructive" },
+  exception: { label: "Exception", variant: "outline" },
 };
 
 function formatDate(date: Date | null): string {
@@ -52,34 +60,38 @@ function formatDate(date: Date | null): string {
   });
 }
 
-function isStuckInTransit(status: LetterStatus, eta: Date | null): boolean {
-  if (status !== "shipped" || !eta) return false;
-  const daysPastEta = Math.floor(
-    (Date.now() - new Date(eta).getTime()) / (1000 * 60 * 60 * 24)
-  );
-  return daysPastEta >= 20;
-}
-
-function StatusBadge({
-  status,
-  eta,
-}: {
-  status: LetterStatus;
-  eta: Date | null;
-}) {
-  const stuck = isStuckInTransit(status, eta);
-
-  if (stuck) {
-    return (
-      <Badge
-        variant="outline"
-        className="border-amber-500 bg-amber-50 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400"
-      >
-        Stuck
-      </Badge>
-    );
+function getDaysToViolation(
+  status: LetterStatus,
+  mailedAt: Date | null,
+  controlDayCount: number | null
+): { days: number | null; isOverdue: boolean } {
+  // Only show for shipped or exception status
+  if (
+    !["shipped", "exception"].includes(status) ||
+    !mailedAt ||
+    !controlDayCount
+  ) {
+    return { days: null, isOverdue: false };
   }
 
+  const mailedDate = new Date(mailedAt);
+  const deadlineDate = new Date(mailedDate);
+  deadlineDate.setDate(deadlineDate.getDate() + controlDayCount);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadlineDate.setHours(0, 0, 0, 0);
+
+  const diffTime = deadlineDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  return {
+    days: Math.abs(diffDays),
+    isOverdue: diffDays < 0,
+  };
+}
+
+function StatusBadge({ status }: { status: LetterStatus }) {
   const config = statusConfig[status];
   return (
     <Badge
@@ -91,7 +103,9 @@ function StatusBadge({
         status === "shipped" && "bg-blue-600 hover:bg-blue-700",
         status === "not_sent" && "bg-muted text-muted-foreground",
         status === "returned" &&
-          "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400"
+          "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400",
+        status === "exception" &&
+          "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
       )}
     >
       {config.label}
@@ -173,19 +187,61 @@ const columns: ColumnDef<AccountLetterWithDetails>[] = [
     ),
   },
   {
+    id: "days_to_violation",
+    header: "Days to Violation",
+    cell: ({ row }) => {
+      const { days, isOverdue } = getDaysToViolation(
+        row.original.status,
+        row.original.mailed_at,
+        row.original.control_day_count
+      );
+
+      if (days === null) {
+        return <span className="text-sm text-muted-foreground">—</span>;
+      }
+
+      if (isOverdue) {
+        return (
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+              {days} day{days !== 1 ? "s" : ""} overdue
+            </span>
+          </div>
+        );
+      }
+
+      return (
+        <span
+          className={cn(
+            "text-sm font-medium",
+            days <= 3 && "text-amber-600 dark:text-amber-400",
+            days > 3 && "text-muted-foreground"
+          )}
+        >
+          {days} day{days !== 1 ? "s" : ""}
+        </span>
+      );
+    },
+  },
+  {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <StatusBadge status={row.original.status} eta={row.original.eta} />
-    ),
+    cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },
 ];
 
 function ExpandedRow({ row }: { row: Row<AccountLetterWithDetails> }) {
   const data = row.original;
+  const isException = data.status === "exception";
 
   return (
-    <div className="bg-muted/30 border-l-4 border-primary/20 px-6 py-4">
+    <div
+      className={cn(
+        "bg-muted/30 border-l-4 px-6 py-4",
+        isException ? "border-amber-500" : "border-primary/20"
+      )}
+    >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Letter Details */}
         <div>
@@ -203,6 +259,20 @@ function ExpandedRow({ row }: { row: Row<AccountLetterWithDetails> }) {
                 {data.letter_description || "—"}
               </span>
             </div>
+            {isException && data.control_id && (
+              <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950/50">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">
+                    Control Violation: {data.control_id}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  This letter has exceeded the {data.control_day_count}-day
+                  regulatory deadline for delivery.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

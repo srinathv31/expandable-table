@@ -26,6 +26,7 @@ const statusOptions: { value: LetterStatus; label: string }[] = [
   { value: "shipped", label: "Shipped" },
   { value: "delivered", label: "Delivered" },
   { value: "returned", label: "Returned" },
+  { value: "exception", label: "Exception" },
 ];
 
 // Client-side parsers (without defaults that would cause hydration issues)

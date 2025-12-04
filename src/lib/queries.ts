@@ -10,11 +10,13 @@ interface AccountLetterRow {
   address: string | null;
   mailed_at: Date | null;
   eta: Date | null;
-  status: "not_sent" | "shipped" | "delivered" | "returned";
+  status: "not_sent" | "shipped" | "delivered" | "returned" | "exception";
   created_at: Date;
   letter_name: string;
   letter_description: string | null;
   letter_category: string | null;
+  control_id: string | null;
+  control_day_count: number | null;
 }
 
 interface TrackingEventRow {
@@ -105,7 +107,9 @@ export async function getAccountLettersWithTracking(
       al.created_at,
       l.name as letter_name,
       l.description as letter_description,
-      l.category as letter_category
+      l.category as letter_category,
+      l.control_id,
+      l.control_day_count
     FROM account_letters al
     JOIN letters l ON al.letter_id = l.id
     ${whereClause}
@@ -162,6 +166,8 @@ export async function getLetters(): Promise<Letter[]> {
       category,
       business_unit,
       created_by,
+      control_id,
+      control_day_count,
       is_active,
       created_at
     FROM letters

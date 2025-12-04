@@ -9,7 +9,7 @@ const pool = new Pool({
 });
 
 // Types
-type LetterStatus = "not_sent" | "shipped" | "delivered" | "returned";
+type LetterStatus = "not_sent" | "shipped" | "delivered" | "returned" | "exception";
 
 interface AccountLetterData {
   letterId: number;
@@ -381,10 +381,10 @@ const scenarios: AccountScenario[] = [
     },
   },
 
-  // Letter Stuck in Transit: Shipped but way past ETA (2 accounts)
+  // Control Violation - Exception: Letter past regulatory deadline (4 accounts)
   {
-    name: "Letter stuck in transit",
-    count: 2,
+    name: "Control Violation - Exception",
+    count: 4,
     generator: () => {
       const letters: AccountLetterData[] = [];
 
@@ -395,12 +395,13 @@ const scenarios: AccountScenario[] = [
         status: "delivered",
       });
 
-      // A letter shipped 30+ days ago (ETA is mailed_at + 5, so 25+ days overdue)
-      const stuckLetter = pickRandomLetters(1, [LETTERS.WELCOME])[0];
+      // A letter that has exceeded its control_day_count deadline (7-15 days)
+      // Mailed 20-35 days ago means it's well past the 7-15 day control deadline
+      const exceptionLetter = pickRandomLetters(1, [LETTERS.WELCOME])[0];
       letters.push({
-        letterId: stuckLetter,
-        daysAgo: randomInt(30, 45), // 25-40 days past the 5-day ETA
-        status: "shipped",
+        letterId: exceptionLetter,
+        daysAgo: randomInt(20, 35),
+        status: "exception",
       });
 
       return letters.sort((a, b) => b.daysAgo - a.daysAgo);
@@ -411,24 +412,35 @@ const scenarios: AccountScenario[] = [
 async function seed() {
   console.log("🌱 Starting database seed...\n");
 
+  // Drop existing tables to ensure clean schema
+  console.log("🗑️  Dropping existing tables...");
+  await pool.query(`
+    DROP TABLE IF EXISTS tracking_events CASCADE;
+    DROP TABLE IF EXISTS account_letters CASCADE;
+    DROP TABLE IF EXISTS letters CASCADE;
+  `);
+  console.log("✅ Tables dropped\n");
+
   // Create tables
   console.log("📋 Creating tables...");
 
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS letters (
+    CREATE TABLE letters (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       description TEXT,
       category VARCHAR(100),
       business_unit VARCHAR(100),
       created_by VARCHAR(255),
+      control_id VARCHAR(20),
+      control_day_count INTEGER,
       is_active BOOLEAN DEFAULT true,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
 
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS account_letters (
+    CREATE TABLE account_letters (
       id SERIAL PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL,
       letter_id INTEGER REFERENCES letters(id),
@@ -441,7 +453,7 @@ async function seed() {
   `);
 
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS tracking_events (
+    CREATE TABLE tracking_events (
       id SERIAL PRIMARY KEY,
       account_letter_id INTEGER REFERENCES account_letters(id) ON DELETE CASCADE,
       status VARCHAR(100) NOT NULL,
@@ -452,13 +464,6 @@ async function seed() {
 
   console.log("✅ Tables created\n");
 
-  // Clear existing data
-  console.log("🧹 Clearing existing data...");
-  await pool.query(
-    "TRUNCATE tracking_events, account_letters, letters RESTART IDENTITY CASCADE"
-  );
-  console.log("✅ Data cleared\n");
-
   // Seed letters
   console.log("📝 Seeding letters...");
   const letters = [
@@ -468,6 +473,8 @@ async function seed() {
       category: "Onboarding",
       business_unit: "Customer Success",
       created_by: "john.doe@company.com",
+      control_id: "CR-01",
+      control_day_count: 10,
     },
     {
       name: "Account Statement",
@@ -475,6 +482,8 @@ async function seed() {
       category: "Financial",
       business_unit: "Finance",
       created_by: "jane.smith@company.com",
+      control_id: "CR-02",
+      control_day_count: 14,
     },
     {
       name: "Policy Update Notice",
@@ -482,6 +491,8 @@ async function seed() {
       category: "Compliance",
       business_unit: "Legal",
       created_by: "legal@company.com",
+      control_id: "CR-03",
+      control_day_count: 12,
     },
     {
       name: "Renewal Reminder",
@@ -489,6 +500,8 @@ async function seed() {
       category: "Marketing",
       business_unit: "Sales",
       created_by: "sales@company.com",
+      control_id: "CR-04",
+      control_day_count: 15,
     },
     {
       name: "Tax Document 1099",
@@ -496,6 +509,8 @@ async function seed() {
       category: "Tax",
       business_unit: "Finance",
       created_by: "tax@company.com",
+      control_id: "CR-05",
+      control_day_count: 15,
     },
     {
       name: "Rate Change Notice",
@@ -503,6 +518,8 @@ async function seed() {
       category: "Financial",
       business_unit: "Finance",
       created_by: "rates@company.com",
+      control_id: "CR-06",
+      control_day_count: 7,
     },
     {
       name: "Privacy Policy Update",
@@ -510,6 +527,8 @@ async function seed() {
       category: "Compliance",
       business_unit: "Legal",
       created_by: "privacy@company.com",
+      control_id: "CR-07",
+      control_day_count: 14,
     },
     {
       name: "Promotional Offer",
@@ -517,6 +536,8 @@ async function seed() {
       category: "Marketing",
       business_unit: "Marketing",
       created_by: "marketing@company.com",
+      control_id: "CR-08",
+      control_day_count: 12,
     },
     {
       name: "Account Closure Confirmation",
@@ -524,6 +545,8 @@ async function seed() {
       category: "Service",
       business_unit: "Operations",
       created_by: "ops@company.com",
+      control_id: "CR-09",
+      control_day_count: 8,
     },
     {
       name: "Beneficiary Update Form",
@@ -531,18 +554,22 @@ async function seed() {
       category: "Service",
       business_unit: "Operations",
       created_by: "ops@company.com",
+      control_id: "CR-10",
+      control_day_count: 10,
     },
   ];
 
   for (const letter of letters) {
     await pool.query(
-      `INSERT INTO letters (name, description, category, business_unit, created_by) VALUES ($1, $2, $3, $4, $5)`,
+      `INSERT INTO letters (name, description, category, business_unit, created_by, control_id, control_day_count) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         letter.name,
         letter.description,
         letter.category,
         letter.business_unit,
         letter.created_by,
+        letter.control_id,
+        letter.control_day_count,
       ]
     );
   }
@@ -692,6 +719,10 @@ async function seed() {
     } else if (accountLetter.status === "delivered") {
       // Delivered letters have full tracking
       events = trackingStatuses;
+    } else if (accountLetter.status === "exception") {
+      // Exception letters have partial tracking - stuck in transit
+      const numEvents = randomInt(2, 3);
+      events = trackingStatuses.slice(0, numEvents);
     } else {
       // Shipped letters have partial tracking (1-3 events)
       const numEvents = randomInt(1, 3);
