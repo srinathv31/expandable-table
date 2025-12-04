@@ -2,8 +2,12 @@ import { Suspense } from "react";
 import { getLetters } from "@/lib/queries";
 import { LettersTable } from "@/components/letters-table";
 import { LettersStatsCards } from "@/components/letters-stats-cards";
-import { StatsCardsSkeleton, LettersTableSkeleton } from "@/components/skeletons";
-import { Library } from "lucide-react";
+import {
+  StatsCardsSkeleton,
+  LettersTableSkeleton,
+} from "@/components/skeletons";
+import { Library, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function LettersPage() {
   const dataPromise = getLetters();
@@ -35,7 +39,13 @@ export default function LettersPage() {
 
         {/* Table */}
         <Suspense fallback={<LettersTableSkeleton />}>
-          <LettersTable dataPromise={dataPromise} />
+          <div className="flex flex-col gap-4">
+            <Button variant="outline" className="mb-4 self-end">
+              <Plus className="h-4 w-4" />
+              Add Letter
+            </Button>
+            <LettersTable dataPromise={dataPromise} />
+          </div>
         </Suspense>
       </div>
     </div>
