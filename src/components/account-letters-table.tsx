@@ -251,6 +251,16 @@ const columns: ColumnDef<AccountLetterWithDetails>[] = [
   },
   {
     id: "days_to_violation",
+    accessorFn: (row) => {
+      const { days, isOverdue } = getDaysToViolation(
+        row.status,
+        row.mailed_at,
+        row.control_day_count
+      );
+      if (days === null) return null;
+      // Return effective days for sorting (overdue = negative)
+      return isOverdue ? -days : days;
+    },
     header: ({ column }) => (
       <SortableHeader column={column}>Days to Violation</SortableHeader>
     ),
@@ -288,28 +298,16 @@ const columns: ColumnDef<AccountLetterWithDetails>[] = [
         </span>
       );
     },
-    sortingFn: (rowA, rowB) => {
-      const a = getDaysToViolation(
-        rowA.original.status,
-        rowA.original.mailed_at,
-        rowA.original.control_day_count
-      );
-      const b = getDaysToViolation(
-        rowB.original.status,
-        rowB.original.mailed_at,
-        rowB.original.control_day_count
-      );
+    sortingFn: (rowA, rowB, columnId) => {
+      const a = rowA.getValue<number | null>(columnId);
+      const b = rowB.getValue<number | null>(columnId);
 
       // Handle null values (push them to the end)
-      if (a.days === null && b.days === null) return 0;
-      if (a.days === null) return 1;
-      if (b.days === null) return -1;
+      if (a === null && b === null) return 0;
+      if (a === null) return 1;
+      if (b === null) return -1;
 
-      // Overdue items (negative effective days) should come first when ascending
-      const effectiveA = a.isOverdue ? -a.days : a.days;
-      const effectiveB = b.isOverdue ? -b.days : b.days;
-
-      return effectiveA - effectiveB;
+      return a - b;
     },
   },
   {
