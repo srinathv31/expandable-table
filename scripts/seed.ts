@@ -9,7 +9,12 @@ const pool = new Pool({
 });
 
 // Types
-type LetterStatus = "not_sent" | "shipped" | "delivered" | "returned" | "exception";
+type LetterStatus =
+  | "not_sent"
+  | "shipped"
+  | "delivered"
+  | "returned"
+  | "exception";
 
 interface AccountLetterData {
   letterId: number;

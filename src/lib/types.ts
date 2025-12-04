@@ -1,4 +1,9 @@
-export type LetterStatus = "not_sent" | "shipped" | "delivered" | "returned" | "exception";
+export type LetterStatus =
+  | "not_sent"
+  | "shipped"
+  | "delivered"
+  | "returned"
+  | "exception";
 
 export interface Letter {
   id: number;
