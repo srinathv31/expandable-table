@@ -1,13 +1,16 @@
 "use client";
 
-import { Fragment, use } from "react";
+import { Fragment, use, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
   getExpandedRowModel,
+  getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type Row,
+  type SortingState,
+  type Column,
 } from "@tanstack/react-table";
 import {
   ChevronRight,
@@ -16,6 +19,9 @@ import {
   Calendar,
   Clock,
   AlertTriangle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { AccountLetterWithDetails, LetterStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +55,15 @@ const statusConfig: Record<
   delivered: { label: "Delivered", variant: "outline" },
   returned: { label: "Returned", variant: "destructive" },
   exception: { label: "Exception", variant: "outline" },
+};
+
+// Status priority for sorting (lower number = higher priority)
+const statusPriority: Record<LetterStatus, number> = {
+  exception: 0,
+  shipped: 1,
+  delivered: 2,
+  returned: 3,
+  not_sent: 4,
 };
 
 function formatDate(date: Date | null): string {
@@ -113,6 +128,34 @@ function StatusBadge({ status }: { status: LetterStatus }) {
   );
 }
 
+function SortableHeader<TData>({
+  column,
+  children,
+}: {
+  column: Column<TData, unknown>;
+  children: React.ReactNode;
+}) {
+  const sorted = column.getIsSorted();
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8 hover:bg-accent"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+    >
+      {children}
+      {sorted === "asc" ? (
+        <ArrowUp className="ml-2 h-4 w-4" />
+      ) : sorted === "desc" ? (
+        <ArrowDown className="ml-2 h-4 w-4" />
+      ) : (
+        <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+      )}
+    </Button>
+  );
+}
+
 const columns: ColumnDef<AccountLetterWithDetails>[] = [
   {
     id: "expander",
@@ -168,27 +211,49 @@ const columns: ColumnDef<AccountLetterWithDetails>[] = [
   },
   {
     accessorKey: "mailed_at",
-    header: "Mailed",
+    header: ({ column }) => (
+      <SortableHeader column={column}>Mailed</SortableHeader>
+    ),
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm">{formatDate(row.original.mailed_at)}</span>
       </div>
     ),
+    sortingFn: (rowA, rowB) => {
+      const a = rowA.original.mailed_at;
+      const b = rowB.original.mailed_at;
+      if (!a && !b) return 0;
+      if (!a) return 1;
+      if (!b) return -1;
+      return new Date(a).getTime() - new Date(b).getTime();
+    },
   },
   {
     accessorKey: "eta",
-    header: "ETA",
+    header: ({ column }) => (
+      <SortableHeader column={column}>ETA</SortableHeader>
+    ),
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <Clock className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm">{formatDate(row.original.eta)}</span>
       </div>
     ),
+    sortingFn: (rowA, rowB) => {
+      const a = rowA.original.eta;
+      const b = rowB.original.eta;
+      if (!a && !b) return 0;
+      if (!a) return 1;
+      if (!b) return -1;
+      return new Date(a).getTime() - new Date(b).getTime();
+    },
   },
   {
     id: "days_to_violation",
-    header: "Days to Violation",
+    header: ({ column }) => (
+      <SortableHeader column={column}>Days to Violation</SortableHeader>
+    ),
     cell: ({ row }) => {
       const { days, isOverdue } = getDaysToViolation(
         row.original.status,
@@ -223,11 +288,41 @@ const columns: ColumnDef<AccountLetterWithDetails>[] = [
         </span>
       );
     },
+    sortingFn: (rowA, rowB) => {
+      const a = getDaysToViolation(
+        rowA.original.status,
+        rowA.original.mailed_at,
+        rowA.original.control_day_count
+      );
+      const b = getDaysToViolation(
+        rowB.original.status,
+        rowB.original.mailed_at,
+        rowB.original.control_day_count
+      );
+
+      // Handle null values (push them to the end)
+      if (a.days === null && b.days === null) return 0;
+      if (a.days === null) return 1;
+      if (b.days === null) return -1;
+
+      // Overdue items (negative effective days) should come first when ascending
+      const effectiveA = a.isOverdue ? -a.days : a.days;
+      const effectiveB = b.isOverdue ? -b.days : b.days;
+
+      return effectiveA - effectiveB;
+    },
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <SortableHeader column={column}>Status</SortableHeader>
+    ),
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    sortingFn: (rowA, rowB) => {
+      const priorityA = statusPriority[rowA.original.status];
+      const priorityB = statusPriority[rowB.original.status];
+      return priorityA - priorityB;
+    },
   },
 ];
 
@@ -294,12 +389,18 @@ export function AccountLettersTable({
 }: AccountLettersTableProps) {
   const data = use(dataPromise);
   const letterNames = use(letterNamesPromise);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    state: {
+      sorting,
+    },
     getRowCanExpand: () => true,
   });
 
